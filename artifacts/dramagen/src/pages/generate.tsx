@@ -370,6 +370,36 @@ export default function Generate() {
             />
             <div className="absolute bottom-2 right-3 text-xs text-muted-foreground/50">{text.length}/500</div>
           </div>
+          {text.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="space-y-1.5"
+            >
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground uppercase tracking-wider font-bold">Rage Meter</span>
+                <span className={`font-bold ${text.length < 100 ? "text-blue-400" : text.length < 250 ? "text-yellow-400" : text.length < 400 ? "text-orange-400" : "text-primary"}`}>
+                  {text.length < 100 ? "😐 Mildly Annoyed" : text.length < 250 ? "😤 Getting Heated" : text.length < 400 ? "🔥 On Fire" : "🤬 MAXIMUM RAGE"}
+                </span>
+              </div>
+              <div className="h-2.5 bg-muted/30 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  animate={{
+                    width: `${Math.min(100, (text.length / 500) * 100)}%`,
+                    background: text.length < 100
+                      ? "linear-gradient(90deg, #60a5fa, #3b82f6)"
+                      : text.length < 250
+                        ? "linear-gradient(90deg, #fbbf24, #f59e0b)"
+                        : text.length < 400
+                          ? "linear-gradient(90deg, #fb923c, #f97316)"
+                          : "linear-gradient(90deg, #ef4444, #dc2626)",
+                  }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+            </motion.div>
+          )}
           <div className="flex flex-wrap gap-2">
             {QUICK_FILLS.map((fill) => (
               <motion.button

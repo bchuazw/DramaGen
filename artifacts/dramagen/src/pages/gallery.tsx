@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { useGetGallery, useReactToGallery } from "@workspace/api-client-react";
 import { formatDistanceToNow } from "date-fns";
-import { Play, Pause, AlertCircle, Share2, Check } from "lucide-react";
+import { Play, Pause, AlertCircle, Share2, Check, Flame } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -101,11 +102,31 @@ export default function Gallery() {
 
           {data?.entries.length === 0 && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="col-span-full text-center py-20 text-muted-foreground border border-dashed border-border rounded-xl glass-card"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="col-span-full text-center py-16 sm:py-24 border border-dashed border-border/50 rounded-2xl glass-card space-y-6"
             >
-              No screams have been echoed yet. Be the first!
+              <motion.div
+                animate={{ rotate: [0, -5, 5, -5, 0] }}
+                transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 4 }}
+                className="text-6xl sm:text-7xl"
+              >
+                🤫
+              </motion.div>
+              <div className="space-y-2">
+                <p className="text-xl sm:text-2xl font-display uppercase tracking-wider text-foreground">
+                  It's Too Quiet in Here
+                </p>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  No one has shared their dramatic rants yet. Be the first to break the silence!
+                </p>
+              </div>
+              <Link href="/generate">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase tracking-wider gap-2 shadow-[0_4px_20px_rgba(255,51,51,0.3)]">
+                  <Flame className="w-5 h-5" />
+                  Generate a Rant
+                </Button>
+              </Link>
             </motion.div>
           )}
         </div>

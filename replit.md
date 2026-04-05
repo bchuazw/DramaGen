@@ -23,11 +23,12 @@ pnpm workspace monorepo using TypeScript. **DramaGen** — a full-stack hackatho
 ## Architecture
 
 ### Frontend (artifacts/dramagen)
-- **Home** (`/`): Landing page with animated hero, interactive canvas particle background (embers/sparks), mouse-reactive effects
+- **Home** (`/`): Landing page with animated hero, "How It Works" 3-step section, 8 drama mode preview cards, animated stat counters, scroll CTA; interactive canvas particle background (embers/sparks/emojis), mouse-reactive effects
 - **Generate** (`/generate`): Protected route — text input, 8 drama modes, voice selection (6 presets + cloned voice), microphone voice cloning, audio playback with animated waveform, multi-stage loading skeleton
 - **My Rants** (`/my-rants`): Protected — user's personal generation history with play/download/share
-- **Gallery** (`/gallery`): Public — "The Hall of Screams" showing community generations with play/react/share
+- **Gallery** (`/gallery`): Public — "The Hall of Screams" showing community generations with play/react/share; animated empty state with CTA
 - **About** (`/about`): Public — how it works, disclaimer
+- **404** (`/*`): Custom "You've Yelled Into the Void" themed page with animated emoji, navigation buttons
 - **Sign-in/Sign-up** (`/sign-in`, `/sign-up`): Clerk auth pages
 - **InteractiveBackground**: Canvas particle system with mobile optimization (reduced particles on small screens)
 - **Theme toggle**: Dark/light mode with theme provider, persisted to localStorage
