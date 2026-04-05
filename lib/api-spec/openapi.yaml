@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: DramaGen API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: translate
+    description: Text translation
+  - name: voices
+    description: Voice management
+  - name: generate
+    description: Audio generation
+  - name: gallery
+    description: Gallery management
 paths:
   /healthz:
     get:
@@ -24,6 +32,179 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /translate:
+    post:
+      operationId: translateText
+      tags: [translate]
+      summary: Translate mild text to dramatic text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslateRequest"
+      responses:
+        "200":
+          description: Translated text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranslateResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /voices/presets:
+    get:
+      operationId: getPresetVoices
+      tags: [voices]
+      summary: Get preset character voices
+      responses:
+        "200":
+          description: List of preset voices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PresetVoicesResponse"
+
+  /voice/clone:
+    post:
+      operationId: cloneVoice
+      tags: [voices]
+      summary: Clone user voice from audio recording
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+              required:
+                - audio
+      responses:
+        "200":
+          description: Cloned voice info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloneVoiceResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /generate:
+    post:
+      operationId: generateAudio
+      tags: [generate]
+      summary: Generate dramatic audio from text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateRequest"
+      responses:
+        "200":
+          description: Generated audio info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /gallery:
+    get:
+      operationId: getGallery
+      tags: [gallery]
+      summary: Get recent public gallery entries
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Gallery entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GalleryResponse"
+    post:
+      operationId: saveToGallery
+      tags: [gallery]
+      summary: Save a generation to the public gallery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveGalleryRequest"
+      responses:
+        "200":
+          description: Saved entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GalleryEntry"
+
+  /gallery/{id}/react:
+    post:
+      operationId: reactToGallery
+      tags: [gallery]
+      summary: Add an emoji reaction to a gallery entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReactRequest"
+      responses:
+        "200":
+          description: Reaction added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReactResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +215,187 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    TranslateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          maxLength: 500
+        mode:
+          type: string
+          enum: [rage, passive_aggressive, disappointed_parent, telenovela, tiktok, drill_sergeant, corporate, ice_cold]
+      required:
+        - text
+        - mode
+
+    TranslateResponse:
+      type: object
+      properties:
+        original:
+          type: string
+        translated:
+          type: string
+        mode:
+          type: string
+      required:
+        - original
+        - translated
+        - mode
+
+    PresetVoice:
+      type: object
+      properties:
+        id:
+          type: string
+        voice_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        emoji:
+          type: string
+        ready:
+          type: boolean
+      required:
+        - id
+        - name
+        - description
+        - emoji
+        - ready
+
+    PresetVoicesResponse:
+      type: object
+      properties:
+        voices:
+          type: array
+          items:
+            $ref: "#/components/schemas/PresetVoice"
+      required:
+        - voices
+
+    CloneVoiceResponse:
+      type: object
+      properties:
+        voice_id:
+          type: string
+        name:
+          type: string
+      required:
+        - voice_id
+        - name
+
+    GenerateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+        voice_id:
+          type: string
+        mode:
+          type: string
+        original_text:
+          type: string
+        voice_type:
+          type: string
+          enum: [clone, preset]
+        voice_name:
+          type: string
+      required:
+        - text
+        - voice_id
+        - mode
+
+    GenerateResponse:
+      type: object
+      properties:
+        audio_url:
+          type: string
+        generation_id:
+          type: integer
+        duration_seconds:
+          type: number
+      required:
+        - audio_url
+        - generation_id
+
+    GalleryEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        original_text:
+          type: string
+        translated_text:
+          type: string
+        mode:
+          type: string
+        voice_type:
+          type: string
+        voice_name:
+          type: string
+        audio_url:
+          type: string
+        reactions:
+          type: object
+          additionalProperties:
+            type: integer
+        created_at:
+          type: string
+      required:
+        - id
+        - original_text
+        - translated_text
+        - mode
+        - audio_url
+        - created_at
+
+    GalleryResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/GalleryEntry"
+        total:
+          type: integer
+      required:
+        - entries
+        - total
+
+    SaveGalleryRequest:
+      type: object
+      properties:
+        generation_id:
+          type: integer
+      required:
+        - generation_id
+
+    ReactRequest:
+      type: object
+      properties:
+        emoji:
+          type: string
+      required:
+        - emoji
+
+    ReactResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        emoji:
+          type: string
+      required:
+        - success
+        - emoji
