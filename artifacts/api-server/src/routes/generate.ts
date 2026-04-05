@@ -4,11 +4,12 @@ import { db } from "@workspace/db";
 import { generationsTable } from "@workspace/db";
 import { GenerateAudioBody, GenerateAudioResponse } from "@workspace/api-zod";
 import { generateSpeech } from "../services/elevenlabs";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 const AUDIO_DIR = path.join(process.cwd(), "public", "audio");
 
-router.post("/generate", async (req, res): Promise<void> => {
+router.post("/generate", requireAuth, async (req, res): Promise<void> => {
   const parsed = GenerateAudioBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request", message: parsed.error.message });
@@ -16,6 +17,7 @@ router.post("/generate", async (req, res): Promise<void> => {
   }
 
   const { text, voice_id, mode, original_text, voice_type, voice_name } = parsed.data;
+  const userId = (req as any).userId;
 
   const filename = await generateSpeech(text, voice_id, mode, AUDIO_DIR);
 
@@ -29,6 +31,7 @@ router.post("/generate", async (req, res): Promise<void> => {
       voiceName: voice_name ?? null,
       audioFilename: filename,
       isPublic: false,
+      userId,
     })
     .returning();
 

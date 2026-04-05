@@ -11,6 +11,7 @@ export const generationsTable = pgTable("generations", {
   voiceName: varchar("voice_name", { length: 100 }),
   audioFilename: varchar("audio_filename", { length: 255 }),
   isPublic: boolean("is_public").default(false),
+  userId: varchar("user_id", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

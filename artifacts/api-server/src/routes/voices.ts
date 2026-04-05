@@ -1,8 +1,10 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import { db } from "@workspace/db";
-import { presetVoicesTable } from "@workspace/db";
+import { presetVoicesTable, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { cloneVoice, VOICE_PRESETS, designAndSaveVoice } from "../services/elevenlabs";
+import { requireAuth } from "../middlewares/requireAuth";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -26,16 +28,42 @@ router.get("/voices/presets", async (req, res): Promise<void> => {
   res.json({ voices });
 });
 
-router.post("/voice/clone", upload.single("audio"), async (req, res): Promise<void> => {
+router.post("/voice/clone", requireAuth, upload.single("audio"), async (req, res): Promise<void> => {
   if (!req.file) {
     res.status(400).json({ error: "No audio file provided" });
     return;
   }
 
-  req.log.info({ size: req.file.size, mimetype: req.file.mimetype }, "Cloning voice");
+  const userId = (req as any).userId;
+  req.log.info({ size: req.file.size, mimetype: req.file.mimetype, userId }, "Cloning voice");
 
   const result = await cloneVoice(req.file.buffer, req.file.originalname || "recording.webm");
+
+  await db
+    .insert(usersTable)
+    .values({ clerkId: userId, clonedVoiceId: result.voice_id, clonedVoiceName: result.name })
+    .onConflictDoUpdate({
+      target: usersTable.clerkId,
+      set: { clonedVoiceId: result.voice_id, clonedVoiceName: result.name, updatedAt: new Date() },
+    });
+
   res.json({ voice_id: result.voice_id, name: result.name });
+});
+
+router.get("/voice/my-clone", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
+
+  if (!user?.clonedVoiceId) {
+    res.json({ has_clone: false });
+    return;
+  }
+
+  res.json({
+    has_clone: true,
+    voice_id: user.clonedVoiceId,
+    voice_name: user.clonedVoiceName,
+  });
 });
 
 export async function initializePresetVoices(): Promise<void> {

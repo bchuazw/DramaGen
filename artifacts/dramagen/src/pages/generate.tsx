@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useTranslateText, useGenerateAudio, useGetPresetVoices, useCloneVoice, useSaveToGallery } from "@workspace/api-client-react";
 import { Flame, Mic, MicOff, Play, Pause, Download, Copy, Share2, RefreshCw, Volume2, CheckCircle2, Loader2, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 const DRAMA_MODES = [
   { id: "rage", emoji: "🔥", name: "Rage Mode", description: "Full volcanic eruption. No holding back." },
@@ -35,6 +36,49 @@ const LOADING_MESSAGES = [
 ];
 
 const SAMPLE_PASSAGE = "I want to thank you all for coming today. The weather has been quite something lately, hasn't it? I've been thinking a lot about how we communicate with each other, and I believe there's always room to improve our relationships.";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" },
+  }),
+};
+
+function playClickSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.1);
+  } catch {}
+}
+
+function playSuccessSound() {
+  try {
+    const ctx = new AudioContext();
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.3);
+      osc.start(ctx.currentTime + i * 0.12);
+      osc.stop(ctx.currentTime + i * 0.12 + 0.3);
+    });
+  } catch {}
+}
 
 export default function Generate() {
   const { toast } = useToast();
@@ -69,13 +113,13 @@ export default function Generate() {
   const resultAudioRef = useRef<HTMLAudioElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const translateText = useTranslateText();
+  const translateText_ = useTranslateText();
   const generateAudio = useGenerateAudio();
   const cloneVoiceMutation = useCloneVoice();
   const saveToGallery = useSaveToGallery();
   const { data: presetsData } = useGetPresetVoices();
 
-  const isLoading = translateText.isPending || generateAudio.isPending;
+  const isLoading = translateText_.isPending || generateAudio.isPending;
 
   useEffect(() => {
     if (isLoading) {
@@ -157,6 +201,7 @@ export default function Generate() {
         setSelectedVoiceId(result.voice_id);
         setSelectedVoiceName(result.name);
         setVoiceType("clone");
+        playSuccessSound();
         toast({ title: "Voice cloned!", description: "Your voice has been cloned successfully." });
       },
       onError: () => {
@@ -166,6 +211,7 @@ export default function Generate() {
   }, [audioBlob, cloneVoiceMutation, toast]);
 
   const handleSelectPresetVoice = (voiceId: string, name: string) => {
+    playClickSound();
     setSelectedVoiceId(voiceId);
     setSelectedVoiceName(name);
     setVoiceType("preset");
@@ -200,14 +246,15 @@ export default function Generate() {
       return;
     }
 
+    playClickSound();
     setTranslatedText("");
     setAudioUrl("");
     setGenerationId(null);
     setSharedToGallery(false);
     setOriginalText(text);
 
-    translateText.mutate(
-      { data: { text: text.trim(), mode: selectedMode as "rage" | "passive_aggressive" | "disappointed_parent" | "telenovela" | "tiktok" | "drill_sergeant" | "corporate" | "ice_cold" } },
+    translateText_.mutate(
+      { data: { text: text.trim(), mode: selectedMode as any } },
       {
         onSuccess: (translated) => {
           setTranslatedText(translated.translated);
@@ -226,6 +273,7 @@ export default function Generate() {
               onSuccess: (result) => {
                 setAudioUrl(result.audio_url);
                 setGenerationId(result.generation_id ?? null);
+                playSuccessSound();
               },
               onError: () => {
                 toast({ title: "Generation failed", description: "Even DramaGen needs a moment to cool down. Try again!", variant: "destructive" });
@@ -258,6 +306,7 @@ export default function Generate() {
     saveToGallery.mutate({ data: { generation_id: generationId } }, {
       onSuccess: () => {
         setSharedToGallery(true);
+        playSuccessSound();
         toast({ title: "Shared to gallery!", description: "Your rant is now live for everyone to hear." });
       },
     });
@@ -289,54 +338,70 @@ export default function Generate() {
   const readyPresets = presetsData?.voices?.filter((v) => v.ready && v.voice_id) ?? [];
 
   return (
-    <div className="min-h-screen w-full py-8 px-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen w-full py-8 px-4"
+    >
       <div className="max-w-3xl mx-auto space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl md:text-6xl font-display uppercase tracking-wider text-white">
-            Generate <span className="text-primary drop-shadow-[0_0_20px_rgba(255,51,51,0.6)]">Drama</span>
-          </h1>
-          <p className="text-muted-foreground">Too tired to yell? We got you.</p>
-        </div>
+        <motion.div initial="hidden" animate="visible" className="text-center space-y-2">
+          <motion.h1 variants={fadeUp} custom={0} className="text-4xl md:text-6xl font-display uppercase tracking-wider text-white">
+            Generate <motion.span
+              className="text-primary inline-block"
+              animate={{ textShadow: ["0 0 20px rgba(255,51,51,0.6)", "0 0 40px rgba(255,51,51,0.8)", "0 0 20px rgba(255,51,51,0.6)"] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              Drama
+            </motion.span>
+          </motion.h1>
+          <motion.p variants={fadeUp} custom={1} className="text-muted-foreground">Too tired to yell? We got you.</motion.p>
+        </motion.div>
 
-        {/* Section A: Message */}
-        <section className="space-y-3">
+        <motion.section variants={fadeUp} custom={2} initial="hidden" animate="visible" className="space-y-3">
           <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Your Message</h2>
-          <div className="relative">
+          <div className="relative glass-card rounded-xl overflow-hidden">
             <Textarea
               data-testid="input-message"
               value={text}
               onChange={(e) => setText(e.target.value.slice(0, 500))}
               placeholder="e.g., I asked you three times to take out the trash..."
-              className="min-h-[120px] bg-card/50 border-border/50 text-foreground placeholder:text-muted-foreground/50 resize-none text-base focus:border-primary/50 focus:ring-primary/20"
+              className="min-h-[120px] bg-transparent border-0 text-foreground placeholder:text-muted-foreground/50 resize-none text-base focus:ring-0 focus:outline-none"
             />
             <div className="absolute bottom-2 right-3 text-xs text-muted-foreground/50">{text.length}/500</div>
           </div>
           <div className="flex flex-wrap gap-2">
             {QUICK_FILLS.map((fill) => (
-              <button
+              <motion.button
                 key={fill}
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 data-testid={`btn-quickfill-${fill.slice(0, 10).replace(/\s/g, "-")}`}
-                onClick={() => setText(fill)}
-                className="text-xs px-3 py-1.5 rounded-full bg-secondary/10 border border-secondary/20 text-secondary hover:bg-secondary/20 transition-colors"
+                onClick={() => { setText(fill); playClickSound(); }}
+                className="text-xs px-3 py-1.5 rounded-full bg-secondary/10 border border-secondary/20 text-secondary hover:bg-secondary/20 transition-colors hover:shadow-[0_0_10px_rgba(139,92,246,0.2)]"
               >
                 {fill}
-              </button>
+              </motion.button>
             ))}
           </div>
-        </section>
+        </motion.section>
 
-        {/* Section B: Drama Mode */}
-        <section className="space-y-3">
+        <motion.section variants={fadeUp} custom={3} initial="hidden" animate="visible" className="space-y-3">
           <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Pick Your Drama Mode</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {DRAMA_MODES.map((mode) => (
-              <button
+            {DRAMA_MODES.map((mode, i) => (
+              <motion.button
                 key={mode.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.05, duration: 0.4 }}
+                whileHover={{ scale: 1.03, y: -3 }}
+                whileTap={{ scale: 0.97 }}
                 data-testid={`btn-mode-${mode.id}`}
-                onClick={() => setSelectedMode(mode.id)}
-                className={`group relative rounded-xl p-3 border text-left transition-all duration-200 ${
+                onClick={() => { setSelectedMode(mode.id); playClickSound(); }}
+                className={`group relative rounded-xl p-3 border text-left transition-all duration-200 hover-tilt ${
                   selectedMode === mode.id
-                    ? "border-primary bg-primary/10 shadow-[0_0_15px_rgba(255,51,51,0.15)]"
+                    ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(255,51,51,0.2)] glow-red"
                     : "border-border/50 bg-card/30 hover:border-primary/30 hover:bg-primary/5"
                 }`}
               >
@@ -344,35 +409,43 @@ export default function Generate() {
                 <div className="text-xs font-bold text-foreground leading-tight">{mode.name}</div>
                 <div className="text-xs text-muted-foreground/70 mt-0.5 leading-tight">{mode.description}</div>
                 {selectedMode === mode.id && (
-                  <div className="absolute top-2 right-2">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-2 right-2"
+                  >
                     <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                  </div>
+                  </motion.div>
                 )}
-              </button>
+              </motion.button>
             ))}
           </div>
-        </section>
+        </motion.section>
 
-        {/* Section C: Voice */}
-        <section className="space-y-3">
+        <motion.section variants={fadeUp} custom={4} initial="hidden" animate="visible" className="space-y-3">
           <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Choose Your Voice</h2>
           <Tabs value={voiceTab} onValueChange={setVoiceTab}>
-            <TabsList className="w-full bg-card/50 border border-border/50">
-              <TabsTrigger value="preset" className="flex-1 data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Character Voice</TabsTrigger>
-              <TabsTrigger value="clone" className="flex-1 data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary">Clone My Voice</TabsTrigger>
+            <TabsList className="w-full bg-card/50 border border-border/50 backdrop-blur-sm">
+              <TabsTrigger value="preset" className="flex-1 data-[state=active]:bg-primary/20 data-[state=active]:text-primary transition-all">Character Voice</TabsTrigger>
+              <TabsTrigger value="clone" className="flex-1 data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary transition-all">Clone My Voice</TabsTrigger>
             </TabsList>
 
             <TabsContent value="preset" className="mt-3">
               {readyPresets.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
+                <div className="text-center py-8 text-muted-foreground text-sm glass-card rounded-xl">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
                   Character voices are being created. This may take a few minutes on first launch.
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {readyPresets.map((voice) => (
-                    <div
+                  {readyPresets.map((voice, i) => (
+                    <motion.div
                       key={voice.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.05 }}
+                      whileHover={{ scale: 1.03, y: -2 }}
+                      whileTap={{ scale: 0.97 }}
                       data-testid={`btn-voice-${voice.id}`}
                       role="button"
                       tabIndex={0}
@@ -380,7 +453,7 @@ export default function Generate() {
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelectPresetVoice(voice.voice_id!, voice.name); }}
                       className={`group relative rounded-xl p-3 border text-left cursor-pointer transition-all duration-200 ${
                         selectedVoiceId === voice.voice_id && voiceType === "preset"
-                          ? "border-secondary bg-secondary/10 shadow-[0_0_15px_rgba(139,92,246,0.15)]"
+                          ? "border-secondary bg-secondary/10 glow-purple"
                           : "border-border/50 bg-card/30 hover:border-secondary/30 hover:bg-secondary/5"
                       }`}
                     >
@@ -389,12 +462,12 @@ export default function Generate() {
                       <div className="text-xs text-muted-foreground/70 mt-0.5">{voice.description}</div>
                       <button
                         onClick={(e) => { e.stopPropagation(); handlePreviewVoice(voice.voice_id!); }}
-                        className="mt-2 flex items-center gap-1 text-xs text-secondary/70 hover:text-secondary"
+                        className="mt-2 flex items-center gap-1 text-xs text-secondary/70 hover:text-secondary transition-colors"
                       >
                         {previewingVoiceId === voice.voice_id ? <Volume2 className="w-3 h-3 animate-pulse" /> : <Play className="w-3 h-3" />}
                         Preview
                       </button>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -406,34 +479,42 @@ export default function Generate() {
             </TabsContent>
 
             <TabsContent value="clone" className="mt-3">
-              <Card className="bg-card/30 border-border/50">
+              <Card className="glass-card border-border/50 overflow-hidden">
                 <CardContent className="p-4 space-y-4">
                   <div className="text-xs text-muted-foreground/70 bg-secondary/5 border border-secondary/20 rounded-lg p-3">
                     By recording your voice, you consent to creating an AI voice clone for use within DramaGen.
                   </div>
 
-                  {clonedVoiceId ? (
-                    <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                      <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-                      <div>
-                        <div className="text-sm font-medium text-green-400">Voice cloned!</div>
-                        <div className="text-xs text-muted-foreground">{clonedVoiceName}</div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="ml-auto border-green-500/30 text-green-400 hover:bg-green-500/10 text-xs"
-                        onClick={() => {
-                          setSelectedVoiceId(clonedVoiceId);
-                          setSelectedVoiceName(clonedVoiceName);
-                          setVoiceType("clone");
-                          toast({ title: "Voice selected", description: "Your cloned voice is ready to use." });
-                        }}
+                  <AnimatePresence>
+                    {clonedVoiceId && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg"
                       >
-                        Use This
-                      </Button>
-                    </div>
-                  ) : null}
+                        <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+                        <div>
+                          <div className="text-sm font-medium text-green-400">Voice cloned!</div>
+                          <div className="text-xs text-muted-foreground">{clonedVoiceName}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="ml-auto border-green-500/30 text-green-400 hover:bg-green-500/10 text-xs"
+                          onClick={() => {
+                            setSelectedVoiceId(clonedVoiceId);
+                            setSelectedVoiceName(clonedVoiceName);
+                            setVoiceType("clone");
+                            playClickSound();
+                            toast({ title: "Voice selected", description: "Your cloned voice is ready to use." });
+                          }}
+                        >
+                          Use This
+                        </Button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="space-y-3">
                     <div className="text-sm text-muted-foreground">
@@ -443,52 +524,77 @@ export default function Generate() {
                       "{SAMPLE_PASSAGE}"
                     </div>
 
-                    {/* Audio level meter */}
-                    {isRecording && (
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary transition-all duration-75 rounded-full"
-                            style={{ width: `${Math.min(100, audioLevel * 100)}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-primary font-mono">{recordingTime}s</span>
-                      </div>
-                    )}
+                    <AnimatePresence>
+                      {isRecording && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-3 bg-muted/30 rounded-full overflow-hidden">
+                              <motion.div
+                                className="h-full bg-gradient-to-r from-primary to-secondary rounded-full"
+                                animate={{ width: `${Math.min(100, audioLevel * 100)}%` }}
+                                transition={{ duration: 0.05 }}
+                              />
+                            </div>
+                            <span className="text-xs text-primary font-mono w-8">{recordingTime}s</span>
+                          </div>
+                          <div className="flex justify-center gap-1 h-8">
+                            {Array.from({ length: 20 }).map((_, i) => (
+                              <motion.div
+                                key={i}
+                                className="w-1 rounded-full bg-primary/80"
+                                animate={{
+                                  height: `${20 + audioLevel * 60 + Math.sin(Date.now() * 0.01 + i) * 20}%`,
+                                }}
+                                transition={{ duration: 0.1 }}
+                              />
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     <div className="flex gap-2">
                       {!isRecording ? (
                         <Button
                           data-testid="button-start-recording"
                           onClick={startRecording}
-                          className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 flex-1"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 flex-1 shadow-[0_0_15px_rgba(255,51,51,0.2)] hover:shadow-[0_0_25px_rgba(255,51,51,0.3)] transition-shadow"
                           disabled={cloneVoiceMutation.isPending}
                         >
                           <Mic className="w-4 h-4" />
                           {audioBlob ? "Re-record" : "Start Recording"}
                         </Button>
                       ) : (
-                        <Button
-                          data-testid="button-stop-recording"
-                          onClick={stopRecording}
-                          variant="outline"
-                          className="border-primary/50 text-primary hover:bg-primary/10 gap-2 flex-1 animate-pulse"
-                        >
-                          <MicOff className="w-4 h-4" />
-                          Stop ({30 - recordingTime}s left)
-                        </Button>
+                        <motion.div className="flex-1" animate={{ scale: [1, 1.02, 1] }} transition={{ duration: 1, repeat: Infinity }}>
+                          <Button
+                            data-testid="button-stop-recording"
+                            onClick={stopRecording}
+                            variant="outline"
+                            className="w-full border-primary/50 text-primary hover:bg-primary/10 gap-2"
+                          >
+                            <MicOff className="w-4 h-4" />
+                            Stop ({30 - recordingTime}s left)
+                          </Button>
+                        </motion.div>
                       )}
 
                       {audioBlob && !isRecording && (
-                        <Button
-                          data-testid="button-clone-voice"
-                          onClick={handleCloneVoice}
-                          disabled={cloneVoiceMutation.isPending}
-                          className="bg-secondary hover:bg-secondary/90 text-secondary-foreground gap-2"
-                        >
-                          {cloneVoiceMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                          Clone Voice
-                        </Button>
+                        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}>
+                          <Button
+                            data-testid="button-clone-voice"
+                            onClick={handleCloneVoice}
+                            disabled={cloneVoiceMutation.isPending}
+                            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground gap-2 shadow-[0_0_15px_rgba(139,92,246,0.2)]"
+                          >
+                            {cloneVoiceMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                            Clone Voice
+                          </Button>
+                        </motion.div>
                       )}
                     </div>
                   </div>
@@ -496,17 +602,16 @@ export default function Generate() {
               </Card>
             </TabsContent>
           </Tabs>
-        </section>
+        </motion.section>
 
-        {/* Section D: Generate Button */}
-        <section>
-          <div className="relative group">
-            <div className={`absolute -inset-1 bg-gradient-to-r from-primary to-secondary blur opacity-40 rounded-2xl transition-opacity ${isLoading ? "opacity-60 animate-pulse" : "group-hover:opacity-60"}`} />
+        <motion.section variants={fadeUp} custom={5} initial="hidden" animate="visible">
+          <motion.div className="relative group" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+            <div className={`absolute -inset-1 bg-gradient-to-r from-primary to-secondary blur-lg opacity-40 rounded-2xl transition-opacity ${isLoading ? "opacity-70 animate-pulse" : "group-hover:opacity-60"}`} />
             <Button
               data-testid="button-generate"
               onClick={handleGenerate}
               disabled={isLoading}
-              className="relative w-full h-16 text-xl font-display uppercase tracking-wider bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
+              className="relative w-full h-16 text-xl font-display uppercase tracking-wider bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-[0_4px_30px_rgba(255,51,51,0.3)]"
             >
               {isLoading ? (
                 <span className="flex items-center gap-3">
@@ -520,119 +625,133 @@ export default function Generate() {
                 </span>
               )}
             </Button>
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
-        {/* Section E: Result */}
-        {audioUrl && translatedText && (
-          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-secondary/30 blur rounded-2xl" />
-            <Card className="relative bg-card/50 border border-primary/30 shadow-[0_0_30px_rgba(255,51,51,0.1)]">
-              <CardContent className="p-5 space-y-5">
-                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-primary" />
-                  The Transformation
-                </h3>
+        <AnimatePresence>
+          {audioUrl && translatedText && (
+            <motion.section
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="space-y-4"
+            >
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-secondary/30 blur-xl rounded-2xl" />
+                <Card className="relative glass-card border-primary/30 shadow-[0_0_40px_rgba(255,51,51,0.1)]">
+                  <CardContent className="p-5 space-y-5">
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-primary" />
+                      The Transformation
+                    </h3>
 
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <div className="text-xs text-muted-foreground/60 font-medium uppercase tracking-wider">Before</div>
-                    <div data-testid="text-original" className="p-3 bg-muted/20 border border-border/40 rounded-lg text-sm text-muted-foreground italic">
-                      "{originalText}"
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="space-y-1.5">
+                        <div className="text-xs text-muted-foreground/60 font-medium uppercase tracking-wider">Before</div>
+                        <div data-testid="text-original" className="p-3 bg-muted/20 border border-border/40 rounded-lg text-sm text-muted-foreground italic">
+                          "{originalText}"
+                        </div>
+                      </motion.div>
+                      <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="space-y-1.5">
+                        <div className="text-xs text-primary/80 font-bold uppercase tracking-wider flex items-center gap-1">
+                          <Flame className="w-3 h-3" />
+                          After ({DRAMA_MODES.find(m => m.id === selectedMode)?.name})
+                        </div>
+                        <div data-testid="text-translated" className="p-3 bg-primary/10 border border-primary/30 rounded-lg text-sm text-foreground font-medium shadow-[inset_0_0_20px_rgba(255,51,51,0.05)]">
+                          "{translatedText}"
+                        </div>
+                      </motion.div>
                     </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="text-xs text-primary/80 font-bold uppercase tracking-wider flex items-center gap-1">
-                      <Flame className="w-3 h-3" />
-                      After ({DRAMA_MODES.find(m => m.id === selectedMode)?.name})
-                    </div>
-                    <div data-testid="text-translated" className="p-3 bg-primary/10 border border-primary/30 rounded-lg text-sm text-foreground font-medium">
-                      "{translatedText}"
-                    </div>
-                  </div>
-                </div>
 
-                {/* Audio Player */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-4 bg-background/50 border border-border/50 rounded-xl">
-                    <button
-                      data-testid="button-play-audio"
-                      onClick={handleToggleResultPlay}
-                      className="w-12 h-12 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors flex-shrink-0"
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6 }}
+                      className="space-y-3"
                     >
-                      {isPlayingResult ? <Pause className="w-5 h-5 text-primary-foreground" /> : <Play className="w-5 h-5 text-primary-foreground ml-0.5" />}
-                    </button>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-foreground">Your Dramatic Rant</div>
-                      <div className="text-xs text-muted-foreground capitalize">{selectedMode?.replace(/_/g, " ")} mode • {selectedVoiceName}</div>
-                      {/* Waveform visualization */}
-                      <div className="flex items-end gap-0.5 h-8 mt-2">
-                        {Array.from({ length: 32 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={`flex-1 rounded-full transition-all duration-300 ${isPlayingResult ? "bg-primary animate-pulse" : "bg-muted/40"}`}
-                            style={{
-                              height: `${20 + Math.sin(i * 0.7 + Date.now() * 0.001) * 12}%`,
-                              animationDelay: `${i * 0.05}s`,
-                              minHeight: "2px",
-                            }}
-                          />
-                        ))}
+                      <div className="flex items-center gap-3 p-4 bg-background/50 border border-border/50 rounded-xl">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          data-testid="button-play-audio"
+                          onClick={handleToggleResultPlay}
+                          className="w-12 h-12 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors flex-shrink-0 shadow-[0_0_20px_rgba(255,51,51,0.3)]"
+                        >
+                          {isPlayingResult ? <Pause className="w-5 h-5 text-primary-foreground" /> : <Play className="w-5 h-5 text-primary-foreground ml-0.5" />}
+                        </motion.button>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-foreground">Your Dramatic Rant</div>
+                          <div className="text-xs text-muted-foreground capitalize">{selectedMode?.replace(/_/g, " ")} mode &bull; {selectedVoiceName}</div>
+                          <div className="flex items-end gap-0.5 h-8 mt-2">
+                            {Array.from({ length: 32 }).map((_, i) => (
+                              <motion.div
+                                key={i}
+                                className={`flex-1 rounded-full ${isPlayingResult ? "bg-primary" : "bg-muted/40"}`}
+                                animate={isPlayingResult ? {
+                                  height: [`${20 + Math.random() * 30}%`, `${40 + Math.random() * 50}%`, `${20 + Math.random() * 30}%`],
+                                } : { height: `${20 + Math.sin(i * 0.7) * 12}%` }}
+                                transition={isPlayingResult ? {
+                                  duration: 0.4 + Math.random() * 0.3,
+                                  repeat: Infinity,
+                                  delay: i * 0.03,
+                                } : { duration: 0.3 }}
+                                style={{ minHeight: "2px" }}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <Button
-                      data-testid="button-download"
-                      onClick={handleDownload}
-                      variant="outline"
-                      size="sm"
-                      className="border-primary/30 text-primary hover:bg-primary/10 gap-1.5 text-xs"
-                    >
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </Button>
-                    <Button
-                      data-testid="button-copy-text"
-                      onClick={handleCopyText}
-                      variant="outline"
-                      size="sm"
-                      className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border gap-1.5 text-xs"
-                    >
-                      <Copy className="w-3.5 h-3.5" /> Copy Text
-                    </Button>
-                    {!sharedToGallery ? (
-                      <Button
-                        data-testid="button-share-gallery"
-                        onClick={handleShareToGallery}
-                        disabled={saveToGallery.isPending}
-                        variant="outline"
-                        size="sm"
-                        className="border-secondary/30 text-secondary hover:bg-secondary/10 gap-1.5 text-xs"
-                      >
-                        <Share2 className="w-3.5 h-3.5" /> Share
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" disabled className="border-green-500/30 text-green-400 gap-1.5 text-xs">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Shared
-                      </Button>
-                    )}
-                    <Button
-                      data-testid="button-generate-another"
-                      onClick={handleGenerateAnother}
-                      variant="outline"
-                      size="sm"
-                      className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border gap-1.5 text-xs"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" /> New Rant
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        )}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { testId: "button-download", onClick: handleDownload, icon: Download, label: "Download", color: "border-primary/30 text-primary hover:bg-primary/10" },
+                          { testId: "button-copy-text", onClick: handleCopyText, icon: Copy, label: "Copy Text", color: "border-border/50 text-muted-foreground hover:text-foreground hover:border-border" },
+                        ].map((btn) => (
+                          <motion.div key={btn.testId} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                            <Button data-testid={btn.testId} onClick={btn.onClick} variant="outline" size="sm" className={`w-full ${btn.color} gap-1.5 text-xs`}>
+                              <btn.icon className="w-3.5 h-3.5" /> {btn.label}
+                            </Button>
+                          </motion.div>
+                        ))}
+                        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                          {!sharedToGallery ? (
+                            <Button
+                              data-testid="button-share-gallery"
+                              onClick={handleShareToGallery}
+                              disabled={saveToGallery.isPending}
+                              variant="outline"
+                              size="sm"
+                              className="w-full border-secondary/30 text-secondary hover:bg-secondary/10 gap-1.5 text-xs"
+                            >
+                              <Share2 className="w-3.5 h-3.5" /> Share
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" disabled className="w-full border-green-500/30 text-green-400 gap-1.5 text-xs">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Shared
+                            </Button>
+                          )}
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                          <Button
+                            data-testid="button-generate-another"
+                            onClick={handleGenerateAnother}
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-border/50 text-muted-foreground hover:text-foreground hover:border-border gap-1.5 text-xs"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" /> New Rant
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  </CardContent>
+                </Card>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

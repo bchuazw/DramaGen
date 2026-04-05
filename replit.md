@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+pnpm workspace monorepo using TypeScript. **DramaGen** — a full-stack hackathon web app (Replit x ElevenLabs) where users sign in, type a mild message, pick a drama style, choose a preset voice or clone their own via microphone, and generate a dramatic audio rant.
 
 ## Stack
 
@@ -15,6 +15,37 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Frontend**: React 19 + Vite + Tailwind CSS + shadcn/ui
+- **Animations**: framer-motion, canvas particle system
+- **Auth**: Clerk (@clerk/react + @clerk/express)
+- **AI**: OpenAI GPT-4o-mini (text translation), ElevenLabs (TTS + voice cloning)
+
+## Architecture
+
+### Frontend (artifacts/dramagen)
+- **Home** (`/`): Landing page with animated hero, interactive canvas particle background (embers/sparks), mouse-reactive effects
+- **Generate** (`/generate`): Protected route — text input, 8 drama modes (Rage, Passive Aggressive, Telenovela, etc.), voice selection (6 presets + cloned voice), microphone voice cloning, audio playback with animated waveform
+- **Gallery** (`/gallery`): Public — "The Hall of Screams" showing community generations with play/react
+- **About** (`/about`): Public — how it works, disclaimer
+- **Sign-in/Sign-up** (`/sign-in`, `/sign-up`): Clerk auth pages
+- **InteractiveBackground**: Canvas particle system with ember/spark/smoke particles, mouse proximity repulsion, speed-reactive spark generation
+
+### Backend (artifacts/api-server)
+- **POST /api/translate**: Takes text + drama mode, uses OpenAI to rewrite dramatically (auth required)
+- **POST /api/generate**: Takes translated text + voice_id, generates audio via ElevenLabs TTS (auth required, rate limited 10/hr)
+- **GET /api/voices/presets**: Returns 6 preset voices
+- **POST /api/voice/clone**: Clones user voice from audio upload, saves to user account (auth required, rate limited)
+- **GET /api/voice/my-clone**: Returns user's cloned voice if any (auth required)
+- **GET /api/gallery**: Public gallery entries
+- **POST /api/gallery/:id/react**: Add emoji reaction
+- **GET /api/audio/:filename**: Serve generated audio files
+- **CORS**: Restricted to Replit domains only
+- **Cleanup**: Auto-deletes audio files older than 24 hours
+
+### Database Tables
+- **generations**: id, original_text, translated_text, mode, voice_id, voice_name, audio_url, userId, is_public, reactions, created_at
+- **preset_voices**: id, elevenlabsVoiceId, name, description, emoji
+- **users**: id, clerkId (unique), clonedVoiceId, clonedVoiceName, createdAt, updatedAt
 
 ## Key Commands
 
