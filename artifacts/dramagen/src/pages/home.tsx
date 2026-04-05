@@ -39,7 +39,7 @@ export default function Home() {
           <motion.h1
             variants={fadeUp}
             custom={1}
-            className="text-6xl md:text-8xl lg:text-9xl font-display tracking-wide uppercase leading-tight text-white"
+            className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-display tracking-wide uppercase leading-tight text-white"
           >
             Too tired to{" "}
             <motion.span
@@ -57,7 +57,7 @@ export default function Home() {
             </motion.span>
           </motion.h1>
 
-          <motion.p variants={fadeUp} custom={2} className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+          <motion.p variants={fadeUp} custom={2} className="text-base sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto px-2">
             Turn your calm, tired text into a dramatic, over-the-top audio rant. We'll scream so you don't have to.
           </motion.p>
 

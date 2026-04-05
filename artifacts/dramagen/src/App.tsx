@@ -5,11 +5,13 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InteractiveBackground } from "@/components/InteractiveBackground";
+import { ThemeProvider } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Generate from "@/pages/generate";
 import Gallery from "@/pages/gallery";
 import About from "@/pages/about";
+import MyRants from "@/pages/my-rants";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 
@@ -70,6 +72,19 @@ function ProtectedGenerate() {
   );
 }
 
+function ProtectedMyRants() {
+  return (
+    <>
+      <Show when="signed-in">
+        <MyRants />
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/sign-in" />
+      </Show>
+    </>
+  );
+}
+
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
   const qc = useQueryClient();
@@ -91,7 +106,7 @@ function ClerkQueryClientCacheInvalidator() {
 
 function AppRouter() {
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-background text-foreground dark selection:bg-primary selection:text-primary-foreground">
+    <div className="flex flex-col min-h-[100dvh] bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
       <InteractiveBackground />
       <Navbar />
       <main className="flex-1 w-full relative z-[2]">
@@ -100,6 +115,7 @@ function AppRouter() {
           <Route path="/sign-in/*?" component={SignInPage} />
           <Route path="/sign-up/*?" component={SignUpPage} />
           <Route path="/generate" component={ProtectedGenerate} />
+          <Route path="/my-rants" component={ProtectedMyRants} />
           <Route path="/gallery" component={Gallery} />
           <Route path="/about" component={About} />
           <Route component={NotFound} />
@@ -122,10 +138,12 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
-        <TooltipProvider>
-          <AppRouter />
-          <Toaster />
-        </TooltipProvider>
+        <ThemeProvider>
+          <TooltipProvider>
+            <AppRouter />
+            <Toaster />
+          </TooltipProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </ClerkProvider>
   );

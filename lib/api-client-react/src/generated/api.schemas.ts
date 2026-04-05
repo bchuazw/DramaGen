@@ -121,3 +121,8 @@ export type GetGalleryParams = {
   limit?: number;
   offset?: number;
 };
+
+export type GetMyRantsParams = {
+  limit?: number;
+  offset?: number;
+};

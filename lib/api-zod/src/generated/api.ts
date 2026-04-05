@@ -134,6 +134,34 @@ export const SaveToGalleryResponse = zod.object({
 });
 
 /**
+ * @summary Get current user's generation history
+ */
+export const getMyRantsQueryLimitDefault = 20;
+export const getMyRantsQueryOffsetDefault = 0;
+
+export const GetMyRantsQueryParams = zod.object({
+  limit: zod.coerce.number().default(getMyRantsQueryLimitDefault),
+  offset: zod.coerce.number().default(getMyRantsQueryOffsetDefault),
+});
+
+export const GetMyRantsResponse = zod.object({
+  entries: zod.array(
+    zod.object({
+      id: zod.number(),
+      original_text: zod.string(),
+      translated_text: zod.string(),
+      mode: zod.string(),
+      voice_type: zod.string().optional(),
+      voice_name: zod.string().optional(),
+      audio_url: zod.string(),
+      reactions: zod.record(zod.string(), zod.number()).optional(),
+      created_at: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
  * @summary Add an emoji reaction to a gallery entry
  */
 export const ReactToGalleryParams = zod.object({

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useGetGallery, useReactToGallery } from "@workspace/api-client-react";
 import { formatDistanceToNow } from "date-fns";
-import { Play, Pause, AlertCircle } from "lucide-react";
+import { Play, Pause, AlertCircle, Share2, Check } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -116,7 +116,9 @@ export default function Gallery() {
 
 function GalleryCard({ entry, onReact }: { entry: any, onReact: (emoji: string) => void }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [audio] = useState(() => new Audio(entry.audio_url));
+  const { toast } = useToast();
 
   const togglePlay = () => {
     if (isPlaying) {
@@ -174,9 +176,23 @@ function GalleryCard({ entry, onReact }: { entry: any, onReact: (emoji: string) 
                 </Button>
               </motion.div>
 
-              <span className="text-xs text-muted-foreground">
-                Voice: {entry.voice_name || 'Preset'}
-              </span>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 text-xs border-border hover:border-primary/30 transition-all"
+                  onClick={() => {
+                    const url = `${window.location.origin}${entry.audio_url}`;
+                    navigator.clipboard.writeText(url);
+                    setCopied(true);
+                    toast({ title: "Link copied!", description: "Share this dramatic rant with anyone." });
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 mr-1 text-green-400" /> : <Share2 className="w-3.5 h-3.5 mr-1" />}
+                  {copied ? "Copied" : "Share"}
+                </Button>
+              </motion.div>
             </div>
 
             <div className="flex items-center gap-2">

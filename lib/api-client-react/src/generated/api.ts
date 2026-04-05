@@ -25,6 +25,7 @@ import type {
   GenerateRequest,
   GenerateResponse,
   GetGalleryParams,
+  GetMyRantsParams,
   HealthStatus,
   PresetVoicesResponse,
   ReactRequest,
@@ -633,6 +634,100 @@ export const useSaveToGallery = <
 > => {
   return useMutation(getSaveToGalleryMutationOptions(options));
 };
+
+/**
+ * @summary Get current user's generation history
+ */
+export const getGetMyRantsUrl = (params?: GetMyRantsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/my-rants?${stringifiedParams}`
+    : `/api/my-rants`;
+};
+
+export const getMyRants = async (
+  params?: GetMyRantsParams,
+  options?: RequestInit,
+): Promise<GalleryResponse> => {
+  return customFetch<GalleryResponse>(getGetMyRantsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyRantsQueryKey = (params?: GetMyRantsParams) => {
+  return [`/api/my-rants`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetMyRantsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyRants>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetMyRantsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMyRants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyRantsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyRants>>> = ({
+    signal,
+  }) => getMyRants(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyRants>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyRantsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyRants>>
+>;
+export type GetMyRantsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get current user's generation history
+ */
+
+export function useGetMyRants<
+  TData = Awaited<ReturnType<typeof getMyRants>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetMyRantsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMyRants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyRantsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Add an emoji reaction to a gallery entry

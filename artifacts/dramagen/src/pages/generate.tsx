@@ -629,6 +629,81 @@ export default function Generate() {
         </motion.section>
 
         <AnimatePresence>
+          {isLoading && !audioUrl && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <Card className="glass-card border-primary/20 overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-primary via-secondary to-primary animate-pulse" />
+                <CardContent className="p-5 space-y-5">
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Flame className="w-6 h-6 text-primary" />
+                    </motion.div>
+                    <div>
+                      <motion.p
+                        key={loadingMessageIndex}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm font-bold text-foreground"
+                      >
+                        {LOADING_MESSAGES[loadingMessageIndex]}
+                      </motion.p>
+                      <p className="text-xs text-muted-foreground">This usually takes 5-10 seconds</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <div className="h-3 bg-muted/30 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-primary/60 to-secondary/60 rounded-full"
+                          initial={{ width: "0%" }}
+                          animate={{ width: translateText_.isPending ? "45%" : "85%" }}
+                          transition={{ duration: translateText_.isPending ? 4 : 8, ease: "easeOut" }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span className={translateText_.isPending ? "text-primary" : "text-green-400"}>
+                          {translateText_.isPending ? "Translating text..." : "Text ready"}
+                        </span>
+                        <span className={generateAudio.isPending ? "text-primary" : "text-muted-foreground/50"}>
+                          {generateAudio.isPending ? "Generating audio..." : "Waiting..."}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center gap-0.5 h-10">
+                      {Array.from({ length: 24 }).map((_, i) => (
+                        <motion.div
+                          key={i}
+                          className="w-1 rounded-full bg-primary/40"
+                          animate={{
+                            height: [`${15 + Math.random() * 20}%`, `${40 + Math.random() * 50}%`, `${15 + Math.random() * 20}%`],
+                          }}
+                          transition={{
+                            duration: 0.6 + Math.random() * 0.4,
+                            repeat: Infinity,
+                            delay: i * 0.05,
+                          }}
+                          style={{ minHeight: "3px" }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
           {audioUrl && translatedText && (
             <motion.section
               initial={{ opacity: 0, y: 30, scale: 0.95 }}

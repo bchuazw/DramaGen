@@ -16,6 +16,7 @@ export * from "./generateRequest";
 export * from "./generateRequestVoiceType";
 export * from "./generateResponse";
 export * from "./getGalleryParams";
+export * from "./getMyRantsParams";
 export * from "./healthStatus";
 export * from "./presetVoice";
 export * from "./presetVoicesResponse";

@@ -1,15 +1,17 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { generationsTable, reactionsTable } from "@workspace/db";
-import { eq, desc, count, sql } from "drizzle-orm";
+import { eq, desc, count, sql, and } from "drizzle-orm";
 import {
   GetGalleryQueryParams,
+  GetMyRantsQueryParams,
   SaveToGalleryBody,
   SaveToGalleryResponse,
   ReactToGalleryParams,
   ReactToGalleryBody,
   ReactToGalleryResponse,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/requireAuth";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -31,6 +33,56 @@ router.get("/gallery", async (req, res): Promise<void> => {
     .select({ count: count() })
     .from(generationsTable)
     .where(eq(generationsTable.isPublic, true));
+  const total = totalResult[0]?.count ?? 0;
+
+  const entriesWithReactions = await Promise.all(
+    entries.map(async (entry) => {
+      const reactions = await db
+        .select({ emoji: reactionsTable.emoji, count: count() })
+        .from(reactionsTable)
+        .where(eq(reactionsTable.generationId, entry.id))
+        .groupBy(reactionsTable.emoji);
+
+      const reactionMap: Record<string, number> = {};
+      for (const r of reactions) {
+        reactionMap[r.emoji] = Number(r.count);
+      }
+
+      return {
+        id: entry.id,
+        original_text: entry.originalText,
+        translated_text: entry.translatedText,
+        mode: entry.mode,
+        voice_type: entry.voiceType,
+        voice_name: entry.voiceName ?? undefined,
+        audio_url: entry.audioFilename ? `/api/audio/${entry.audioFilename}` : "",
+        reactions: reactionMap,
+        created_at: entry.createdAt.toISOString(),
+      };
+    })
+  );
+
+  res.json({ entries: entriesWithReactions, total: Number(total) });
+});
+
+router.get("/my-rants", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const parsed = GetMyRantsQueryParams.safeParse(req.query);
+  const limit = parsed.success ? (parsed.data.limit ?? 20) : 20;
+  const offset = parsed.success ? (parsed.data.offset ?? 0) : 0;
+
+  const entries = await db
+    .select()
+    .from(generationsTable)
+    .where(eq(generationsTable.userId, userId))
+    .orderBy(desc(generationsTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const totalResult = await db
+    .select({ count: count() })
+    .from(generationsTable)
+    .where(eq(generationsTable.userId, userId));
   const total = totalResult[0]?.count ?? 0;
 
   const entriesWithReactions = await Promise.all(

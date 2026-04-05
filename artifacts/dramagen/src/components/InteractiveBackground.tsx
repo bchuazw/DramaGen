@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useMemo } from "react";
+import { useTheme } from "@/components/theme-provider";
 
 interface Particle {
   x: number;
@@ -19,6 +20,11 @@ export function InteractiveBackground() {
   const mouse = useRef({ x: -1000, y: -1000, prevX: -1000, prevY: -1000 });
   const animFrame = useRef<number>(0);
   const lastTime = useRef(0);
+  const { theme } = useTheme();
+
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const maxParticles = isMobile ? 80 : 200;
+  const initialCount = isMobile ? 15 : 30;
 
   const colors = ["#ff3333", "#ff6644", "#cc2222", "#8b5cf6", "#a855f7", "#ff4466"];
 
@@ -53,7 +59,7 @@ export function InteractiveBackground() {
     resize();
     window.addEventListener("resize", resize);
 
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < initialCount; i++) {
       particles.current.push(
         createParticle(
           Math.random() * window.innerWidth,
@@ -181,8 +187,8 @@ export function InteractiveBackground() {
 
       ctx.globalAlpha = 1;
 
-      if (particles.current.length > 200) {
-        particles.current.splice(0, particles.current.length - 200);
+      if (particles.current.length > maxParticles) {
+        particles.current.splice(0, particles.current.length - maxParticles);
       }
 
       animFrame.current = requestAnimationFrame(animate);
@@ -202,7 +208,7 @@ export function InteractiveBackground() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-[1]"
-      style={{ mixBlendMode: "screen" }}
+      style={{ mixBlendMode: theme === "dark" ? "screen" : "multiply", opacity: theme === "light" ? 0.4 : 1 }}
     />
   );
 }
