@@ -1,0 +1,559 @@
+# DramaGen — Replit Agent Build Prompt
+
+## Copy everything below this line into Replit Agent
+
+---
+
+## What to Build
+
+Build **DramaGen** — a web app that transforms your calm, tired, low-energy text into dramatic, over-the-top scolding audio clips spoken in your own cloned voice (or a designed dramatic character voice). Think Key & Peele's "Anger Translator" meets Kagi's LinkedIn Translator, but for generating downloadable audio rants.
+
+**The tagline:** "Too tired to yell? Let DramaGen do it for you."
+
+**The core loop:**
+1. User types a mild message (e.g., "Please stop leaving dishes in the sink")
+2. Picks a drama mode (Rage, Passive-Aggressive, Telenovela, Disappointed Parent, TikTok Fight Starter, etc.)
+3. AI translates the text into a dramatic version in that style
+4. The dramatic text is converted to speech using ElevenLabs — either the user's **cloned voice** or a **designed character voice**
+5. User previews, then downloads the audio clip to send to whoever needs to hear it
+
+---
+
+## Tech Stack
+
+- **Frontend:** React + TypeScript + Tailwind CSS + shadcn/ui components
+- **Backend:** Node.js + Express API server
+- **AI Text Translation:** OpenAI API (GPT-4o-mini) for transforming mild text into dramatic text
+- **Voice Cloning:** ElevenLabs Instant Voice Cloning (IVC) API — user records ~30s of audio in-browser, uploads to ElevenLabs, gets a voice clone
+- **Voice Design:** ElevenLabs Voice Design API — pre-built dramatic character voices generated from text descriptions
+- **Text-to-Speech:** ElevenLabs TTS API (eleven_flash_v2_5 model) — generates the final audio clip
+- **Audio Recording:** Browser MediaRecorder API for capturing user voice samples
+- **Database:** Replit's built-in PostgreSQL (or SQLite) for storing generated clips and voice IDs
+- **File Storage:** Store generated audio clips as files on the server for download
+
+---
+
+## Environment Variables Needed
+
+Set these in Replit Secrets:
+- `ELEVENLABS_API_KEY` — Your ElevenLabs API key
+- `OPENAI_API_KEY` — Your OpenAI API key
+- `SESSION_SECRET` — A random string for session management
+
+---
+
+## App Architecture
+
+### Pages & Routes
+
+**1. Landing Page (`/`)**
+- Bold, fun hero section with the tagline "Too tired to yell? Let DramaGen do it for you."
+- Brief animated demo showing: mild text → dramatic text → audio waveform
+- Big CTA button: "Start Generating Drama"
+- Show a few example transformations as cards
+
+**2. Generator Page (`/generate`) — The Main Feature**
+This is the core page. Layout it as a single-page flow with these sections:
+
+**Section A: Your Message**
+- Large textarea for the user to type their mild/calm message
+- Placeholder text: "e.g., I asked you three times to take out the trash..."
+- Character count (max 500 chars)
+- Quick-fill example buttons below the textarea that populate it with funny examples:
+  - "Please do your dishes"
+  - "You said you'd be here at 7, it's 9"
+  - "I noticed you didn't reply to my text"
+  - "Can you please stop chewing so loud"
+
+**Section B: Pick Your Drama Mode**
+- A row of selectable cards/pills, each with an emoji + name + short description:
+  - 🔥 **Rage Mode** — "Full volcanic eruption. No holding back."
+  - 😒 **Passive Aggressive** — "Smile on the outside, daggers on the inside."
+  - 😢 **Disappointed Parent** — "I'm not mad, I'm just disappointed... devastatingly."
+  - 🎭 **Telenovela** — "Betrayal! Dramatic pauses! Thunder in the background!"
+  - 📱 **TikTok Fight Starter** — "If your man does this... it's time to throw hands 💅"
+  - 🎤 **Drill Sergeant** — "DROP AND GIVE ME 20! YOU CALL THAT AN EXCUSE?!"
+  - 👔 **Corporate Fury** — "Per my last email, I find this utterly unacceptable."
+  - 🧊 **Ice Cold** — "Calm, slow, terrifying. Scarier than yelling."
+
+**Section C: Choose Your Voice**
+Two tabs:
+- **"Clone My Voice"** tab:
+  - A record button that captures ~30 seconds of the user speaking into their microphone
+  - Instructions: "Read this passage out loud in your normal voice for 30 seconds" with a sample passage displayed
+  - Show a waveform/level meter while recording
+  - After recording, show a playback button and a "Clone My Voice" button
+  - When cloned, show a green checkmark and the voice name
+  - Store the `voice_id` in a cookie/localStorage so returning users don't re-record
+  
+- **"Pick a Character Voice"** tab:
+  - Grid of pre-designed dramatic character voices (created via ElevenLabs Voice Design API at app startup):
+    - "The Raging Chef" — Gordon Ramsay-style furious kitchen energy
+    - "Disappointed Mom" — Soft-spoken but devastating guilt
+    - "The Drill Sergeant" — Barking, intense, military style
+    - "Telenovela Star" — Over-the-top dramatic Latin soap opera energy
+    - "The CEO" — Cold, calculated corporate rage
+    - "Anime Villain" — Dramatic, theatrical, grandiose
+  - Each card has a small "Preview" button that plays a sample of that voice
+
+**Section D: Generate Button**
+- Big prominent "Generate Drama 🎬" button
+- On click: shows a loading state with fun text like "Channeling your inner rage..." → "Translating to maximum drama..." → "Recording the rant..."
+
+**Section E: Result**
+- Shows the original text vs. the dramatic translated text side by side
+- Audio player with waveform visualization for the generated clip
+- "Download Audio" button (downloads as .mp3)
+- "Copy Drama Text" button (copies the translated text)
+- "Share" button that copies a shareable link
+- "Generate Another" button to start over
+- "Try Different Mode" button to re-translate with a different drama style (same input text)
+
+**3. Gallery Page (`/gallery`)**
+- Shows recent public generations (opt-in) as cards with:
+  - Original text (truncated)
+  - Drama mode used
+  - Play button for the audio
+  - Emoji react buttons (🔥 💀 😂)
+- This adds virality and lets people browse funny content
+
+**4. About Page (`/about`)**
+- Brief explanation of the app
+- Credits: Built with ElevenLabs Voice Cloning & Voice Design, powered by Replit
+- Links to ElevenLabs and Replit
+- Hashtag #ElevenHacks
+
+### UI/UX Design Guidelines
+
+- **Color scheme:** Dark background (near-black or dark purple/navy) with vibrant accent colors — neon red/orange for rage, electric purple for drama, bright yellow for energy. Think "dramatic" aesthetic.
+- **Typography:** Bold display font for headings (like Inter Black or similar), clean sans-serif for body text
+- **Animations:** 
+  - Subtle shake animation on the "Generate" button
+  - Text typing animation when showing the dramatic translation
+  - Waveform animation during audio playback
+  - Smooth transitions between sections
+- **Mobile-first:** Must look great on phones since users will share/use on mobile
+- **Fun touches:**
+  - The drama mode cards should have subtle hover animations
+  - The loading state should have funny rotating messages
+  - Sound effect (dramatic thunder or record scratch) when the result appears (optional)
+
+---
+
+## Backend API Endpoints
+
+### `POST /api/translate`
+Transforms mild text into dramatic text using OpenAI.
+
+**Request body:**
+```json
+{
+  "text": "Please do your dishes",
+  "mode": "rage"
+}
+```
+
+**Implementation:**
+Use OpenAI's API with a carefully crafted system prompt for each drama mode. The system prompt should:
+- Transform the input into the selected style
+- Keep it funny and entertaining, never genuinely harmful or threatening
+- Add dramatic flair, emphasis markers (ALL CAPS for yelling, *pauses* for dramatic effect)
+- Keep output under 800 characters (good for TTS)
+- Include stage directions in brackets for the TTS to interpret naturally
+
+**System prompts per mode (use these exactly):**
+
+**Rage Mode:**
+```
+You are an anger translator. The user will give you a calm, mild message. Your job is to translate it into a full-blown, over-the-top angry rant as if the speaker has completely lost it. Use ALL CAPS for emphasis, dramatic exaggeration, rhetorical questions, and comedic fury. Keep it funny and entertaining — never genuinely threatening or hateful. Think comedy roast meets Gordon Ramsay meltdown. Max 600 characters. Output ONLY the translated rant, nothing else.
+```
+
+**Passive Aggressive:**
+```
+You are a passive-aggressive translator. The user will give you a calm message. Transform it into the most devastatingly passive-aggressive version possible. Use fake politeness, backhanded compliments, "just so you know" energy, and weaponized kindness. Think smiling through gritted teeth. Sprinkle in phrases like "No worries at all!", "It's totally fine", "I just think it's funny how...", "But you do you!". Make it hilariously cutting while maintaining a veneer of politeness. Max 600 characters. Output ONLY the translated text.
+```
+
+**Disappointed Parent:**
+```
+You are a disappointed parent translator. The user gives you a calm message. Transform it into something a deeply disappointed parent would say — the kind that makes you feel worse than yelling ever could. Use guilt trips, "I'm not mad, just disappointed" energy, references to sacrifice, heavy sighs (written as "..."), and emotional devastation. Make it funny but painfully relatable. Max 600 characters. Output ONLY the translated text.
+```
+
+**Telenovela:**
+```
+You are a telenovela drama translator. Transform the user's calm message into an outrageously dramatic telenovela monologue. Include dramatic pauses (...), gasps, references to betrayal, destiny, and honor. Speak as if revealing a devastating plot twist. Over-the-top theatrical emotion. Think "¡No puede ser! After everything I've done for you!" energy, but in English. Max 600 characters. Output ONLY the translated monologue.
+```
+
+**TikTok Fight Starter:**
+```
+You are a TikTok drama translator. Transform the user's calm message into a viral TikTok-style confrontation script. Use Gen-Z slang, "girl..." energy, "the audacity", "bestie let me tell you", "no because WHY", nail painting emoji energy 💅, and the format of those viral "if your man does X" videos. Keep it fun, sassy, and meme-worthy. Max 600 characters. Output ONLY the translated text.
+```
+
+**Drill Sergeant:**
+```
+You are a military drill sergeant translator. Transform the user's calm message into a full drill sergeant tirade. ALL CAPS yelling, commands, rhetorical questions, "DID I STUTTER?!", push-up threats, comparing the person to a wet noodle. Pure over-the-top boot camp energy. Funny and absurd, not actually military. Max 600 characters. Output ONLY the translated text.
+```
+
+**Corporate Fury:**
+```
+You are a corporate rage translator. Transform the user's calm message into the most devastating corporate-speak takedown. Use "per my last email" energy, CC threats, mentions of "aligning on expectations", "circling back", "as previously communicated", implied career consequences, and weaponized professionalism. The rage is real but expressed entirely through HR-safe language. Max 600 characters. Output ONLY the translated text.
+```
+
+**Ice Cold:**
+```
+You are an ice-cold intimidation translator. Transform the user's calm message into something terrifyingly calm and cold. Short sentences. Deadly quiet. No yelling — that's what makes it scary. Think villain monologue energy. Calculated, measured, with an underlying threat that's never explicitly stated. Use pauses (...) and deliberate word choices. Scarier than any rant. Max 600 characters. Output ONLY the translated text.
+```
+
+**Response:**
+```json
+{
+  "original": "Please do your dishes",
+  "translated": "OH SO WE'RE JUST LIVING IN A ZOO NOW? ...",
+  "mode": "rage"
+}
+```
+
+### `POST /api/voice/clone`
+Clones the user's voice using ElevenLabs IVC API.
+
+**Request:** multipart/form-data with an audio file (webm/wav from browser recording)
+
+**Implementation:**
+```javascript
+// Use ElevenLabs API to create IVC voice
+// POST to https://api.elevenlabs.io/v1/voices/add
+// with the audio file, name, and remove_background_noise=true
+```
+
+**Response:**
+```json
+{
+  "voice_id": "abc123...",
+  "name": "User's Voice Clone"
+}
+```
+
+### `GET /api/voices/presets`
+Returns the list of pre-designed character voices.
+
+**Implementation:**
+On first server start, use the ElevenLabs Voice Design API to create character voices from text descriptions (if they don't already exist in the database). Cache the voice IDs.
+
+Voice descriptions to use:
+- "The Raging Chef": "An angry middle-aged male British chef screaming at the top of his lungs. Gravelly, intense, furious voice with sharp enunciation."
+- "Disappointed Mom": "A middle-aged American woman speaking softly but with devastating emotional weight. Gentle voice that makes you feel terrible."
+- "The Drill Sergeant": "A loud, booming American male military drill sergeant barking orders. Deep, aggressive, commanding voice."
+- "Telenovela Star": "A dramatic female Latin telenovela actress mid-monologue. Passionate, emotional, theatrical voice with exaggerated expression."
+- "The CEO": "A cold, calculating male executive speaking slowly and deliberately. Icy calm with barely concealed fury. Low, measured tone."
+- "Anime Villain": "A dramatic male anime villain delivering a monologue. Deep, theatrical, grandiose voice with evil laughter undertones."
+
+**Response:**
+```json
+{
+  "voices": [
+    {
+      "id": "preset_rage_chef",
+      "voice_id": "el_abc123",
+      "name": "The Raging Chef",
+      "description": "Gordon Ramsay-style furious kitchen energy",
+      "emoji": "👨‍🍳",
+      "preview_url": "/api/voices/preview/preset_rage_chef"
+    }
+  ]
+}
+```
+
+### `POST /api/generate`
+The main endpoint. Takes translated text + voice ID, generates TTS audio.
+
+**Request:**
+```json
+{
+  "text": "OH SO WE'RE JUST LIVING IN A ZOO NOW?...",
+  "voice_id": "abc123",
+  "mode": "rage"
+}
+```
+
+**Implementation:**
+Use ElevenLabs TTS API:
+```javascript
+// POST to https://api.elevenlabs.io/v1/text-to-speech/{voice_id}
+// with model_id: "eleven_flash_v2_5"
+// Save the returned audio to a file
+// Return the file URL
+```
+
+Use voice settings appropriate for the drama mode:
+- Rage/Drill Sergeant: stability=0.3, similarity_boost=0.8, style=0.8
+- Passive Aggressive: stability=0.5, similarity_boost=0.8, style=0.6
+- Disappointed Parent: stability=0.6, similarity_boost=0.8, style=0.7
+- Telenovela: stability=0.3, similarity_boost=0.7, style=0.9
+- Ice Cold: stability=0.7, similarity_boost=0.8, style=0.5
+- TikTok/Corporate: stability=0.4, similarity_boost=0.8, style=0.7
+
+**Response:**
+```json
+{
+  "audio_url": "/api/audio/abc123.mp3",
+  "duration_seconds": 12.5
+}
+```
+
+### `GET /api/audio/:filename`
+Serves the generated audio file for playback and download.
+
+### `POST /api/gallery`
+Saves a generation to the public gallery (opt-in).
+
+### `GET /api/gallery`
+Returns recent gallery entries.
+
+---
+
+## Database Schema
+
+```sql
+CREATE TABLE generations (
+  id SERIAL PRIMARY KEY,
+  original_text TEXT NOT NULL,
+  translated_text TEXT NOT NULL,
+  mode VARCHAR(50) NOT NULL,
+  voice_type VARCHAR(20) NOT NULL, -- 'clone' or 'preset'
+  voice_name VARCHAR(100),
+  audio_filename VARCHAR(255),
+  is_public BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE preset_voices (
+  id VARCHAR(50) PRIMARY KEY,
+  elevenlabs_voice_id VARCHAR(100) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  emoji VARCHAR(10),
+  preview_filename VARCHAR(255),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE reactions (
+  id SERIAL PRIMARY KEY,
+  generation_id INTEGER REFERENCES generations(id),
+  emoji VARCHAR(10) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## Key Implementation Details
+
+### Browser Audio Recording
+Use the MediaRecorder API to record the user's voice:
+```javascript
+// Request microphone access
+const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+const chunks = [];
+
+mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+mediaRecorder.onstop = () => {
+  const blob = new Blob(chunks, { type: 'audio/webm' });
+  // Send blob to /api/voice/clone
+};
+
+// Start recording
+mediaRecorder.start();
+
+// Stop after 30 seconds
+setTimeout(() => mediaRecorder.stop(), 30000);
+```
+
+### ElevenLabs Voice Cloning (Server-side)
+```javascript
+const FormData = require('form-data');
+const fetch = require('node-fetch');
+
+async function cloneVoice(audioBuffer, name) {
+  const form = new FormData();
+  form.append('name', name);
+  form.append('files', audioBuffer, { filename: 'recording.webm', contentType: 'audio/webm' });
+  form.append('remove_background_noise', 'true');
+  form.append('description', 'User voice clone for DramaGen');
+
+  const response = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+    method: 'POST',
+    headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY },
+    body: form
+  });
+  
+  const data = await response.json();
+  return data.voice_id;
+}
+```
+
+### ElevenLabs Voice Design (Server-side, run at startup)
+```javascript
+async function designVoice(description, sampleText) {
+  const response = await fetch('https://api.elevenlabs.io/v1/text-to-voice/design', {
+    method: 'POST',
+    headers: {
+      'xi-api-key': process.env.ELEVENLABS_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model_id: 'eleven_multilingual_ttv_v2',
+      voice_description: description,
+      text: sampleText
+    })
+  });
+  
+  const data = await response.json();
+  const preview = data.previews[0];
+  
+  // Save the voice permanently
+  const createResponse = await fetch('https://api.elevenlabs.io/v1/text-to-voice/create', {
+    method: 'POST',
+    headers: {
+      'xi-api-key': process.env.ELEVENLABS_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      voice_name: 'DramaGen - ' + name,
+      voice_description: description,
+      generated_voice_id: preview.generated_voice_id
+    })
+  });
+  
+  return createResponse.json(); // { voice_id: "..." }
+}
+```
+
+### ElevenLabs TTS Generation (Server-side)
+```javascript
+async function generateSpeech(text, voiceId, voiceSettings) {
+  const response = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+    {
+      method: 'POST',
+      headers: {
+        'xi-api-key': process.env.ELEVENLABS_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_flash_v2_5',
+        voice_settings: voiceSettings
+      })
+    }
+  );
+  
+  const audioBuffer = await response.arrayBuffer();
+  // Save to file and return URL
+  const filename = `drama_${Date.now()}.mp3`;
+  fs.writeFileSync(`./public/audio/${filename}`, Buffer.from(audioBuffer));
+  return filename;
+}
+```
+
+---
+
+## Full User Flow
+
+1. User lands on `/` — sees the fun landing page, clicks "Start Generating Drama"
+2. Taken to `/generate`
+3. Types their mild message in the textarea (or clicks a quick-fill example)
+4. Selects a drama mode card (e.g., "Rage Mode 🔥")
+5. Chooses voice:
+   - Option A: Clicks "Clone My Voice" tab → records 30s of audio → clicks "Clone" → waits 5-10s → voice cloned ✅
+   - Option B: Clicks "Pick a Character Voice" tab → previews voices → selects one
+6. Clicks "Generate Drama 🎬"
+7. Backend: translates text via OpenAI → generates TTS via ElevenLabs → returns audio URL
+8. UI shows: original vs. dramatic text side-by-side, audio player with the clip
+9. User clicks "Download" → gets .mp3 file
+10. Optionally clicks "Share to Gallery" to make it public
+11. Can browse `/gallery` to see/hear other people's generations
+
+---
+
+## Important Notes
+
+- **Keep it fun, never harmful.** The AI translations should be comedic and over-the-top, never genuinely threatening, hateful, or targeting protected groups. Add a content moderation check on the input.
+- **Voice clone consent.** Show a brief consent notice before recording: "By recording your voice, you consent to creating an AI voice clone for use within DramaGen."
+- **Rate limiting.** Add basic rate limiting (e.g., 10 generations per hour per IP) to avoid API cost runaway.
+- **Error handling.** Handle ElevenLabs API errors gracefully — show a funny error message like "Even DramaGen needs a moment to cool down. Try again!"
+- **Audio cleanup.** Delete generated audio files older than 24 hours to manage storage (unless saved to gallery).
+- **Mobile-responsive.** The app MUST work well on mobile since people will use it on their phones.
+- **Loading states.** The generation takes 5-15 seconds. Use engaging loading animations with rotating funny messages.
+
+---
+
+## File Structure
+
+```
+/
+├── client/                    # React frontend
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── AudioPlayer.tsx
+│   │   │   ├── AudioRecorder.tsx
+│   │   │   ├── DramaModeSelector.tsx
+│   │   │   ├── GenerationResult.tsx
+│   │   │   ├── GalleryCard.tsx
+│   │   │   ├── VoiceSelector.tsx
+│   │   │   ├── VoiceCloneTab.tsx
+│   │   │   ├── PresetVoiceTab.tsx
+│   │   │   └── LoadingOverlay.tsx
+│   │   ├── pages/
+│   │   │   ├── Landing.tsx
+│   │   │   ├── Generator.tsx
+│   │   │   ├── Gallery.tsx
+│   │   │   └── About.tsx
+│   │   ├── hooks/
+│   │   │   ├── useAudioRecorder.ts
+│   │   │   └── useGeneration.ts
+│   │   ├── lib/
+│   │   │   └── api.ts
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── index.html
+│   └── package.json
+├── server/
+│   ├── index.ts               # Express server entry
+│   ├── routes/
+│   │   ├── translate.ts       # /api/translate
+│   │   ├── voice.ts           # /api/voice/clone, /api/voices/presets
+│   │   ├── generate.ts        # /api/generate
+│   │   ├── audio.ts           # /api/audio/:filename
+│   │   └── gallery.ts         # /api/gallery
+│   ├── services/
+│   │   ├── elevenlabs.ts      # ElevenLabs API wrapper
+│   │   ├── openai.ts          # OpenAI API wrapper
+│   │   └── voicePresets.ts    # Voice preset initialization
+│   └── db.ts                  # Database setup
+├── shared/
+│   └── types.ts               # Shared TypeScript types
+├── public/
+│   └── audio/                 # Generated audio files
+├── package.json
+└── .env                       # (Replit Secrets)
+```
+
+---
+
+## Deployment Checklist
+
+1. App runs on Replit and is accessible via a public URL
+2. All API keys stored in Replit Secrets (never hardcoded)
+3. Voice cloning works in-browser (microphone → record → clone)
+4. Voice Design presets are initialized on first run
+5. Text translation works for all 8 drama modes
+6. TTS generation produces downloadable .mp3 files
+7. Gallery page shows public generations
+8. Mobile-responsive design
+9. Loading states and error handling are polished
+
+---
+
+## Summary for Replit Agent
+
+Build DramaGen: a web app where users type a mild message, pick a drama style (Rage, Passive Aggressive, Telenovela, etc.), choose to use their own cloned voice OR a pre-designed character voice, and generate a dramatic audio rant they can download and send to anyone. Use ElevenLabs Voice Cloning API for cloning the user's voice from a browser recording, ElevenLabs Voice Design API for creating preset character voices, and ElevenLabs TTS API (eleven_flash_v2_5) for generating the final audio. Use OpenAI for the text transformation. Make the UI dark, dramatic, fun, and mobile-friendly. This is for the ElevenHacks hackathon (Replit x ElevenLabs).
