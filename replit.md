@@ -37,8 +37,9 @@ pnpm workspace monorepo using TypeScript. **DramaGen** — a full-stack hackatho
 ### Backend (artifacts/api-server)
 - **POST /api/translate**: Takes text + drama mode, uses OpenAI to rewrite dramatically (auth required)
 - **POST /api/generate**: Takes translated text + voice_id, generates audio via ElevenLabs TTS (auth required, rate limited 10/hr)
-- **GET /api/voices/presets**: Returns 6 preset voices
-- **POST /api/voice/clone**: Clones user voice from audio upload, saves to user account via upsert (auth required, rate limited)
+- **GET /api/voices/presets**: Returns 6 preset voices (created via ElevenLabs Voice Design API on first startup)
+- **GET /api/voices/:voiceId/preview**: Proxies voice preview audio from ElevenLabs
+- **POST /api/voice/clone**: Clones user voice from audio upload via ElevenLabs Instant Voice Cloning API, saves to user account via upsert (auth required, rate limited)
 - **GET /api/voice/my-clone**: Returns user's cloned voice if any (auth required)
 - **GET /api/gallery**: Public gallery entries
 - **GET /api/my-rants**: User's generation history (auth required)

@@ -169,7 +169,7 @@ async function designVoice(preset: VoiceDesignPreset): Promise<string | null> {
       body: JSON.stringify({
         model_id: "eleven_multilingual_ttv_v2",
         voice_description: preset.voiceDescription,
-        text: "You have disappointed me for the last time. I want you to think very carefully about what you have done.",
+        text: "You have disappointed me for the last time. I want you to think very carefully about what you have done. This is absolutely unacceptable behavior and I will not stand for it any longer, do you understand me clearly?",
       }),
     });
 
@@ -182,7 +182,7 @@ async function designVoice(preset: VoiceDesignPreset): Promise<string | null> {
     const generatedVoiceId = designData.previews?.[0]?.generated_voice_id;
     if (!generatedVoiceId) return null;
 
-    const createRes = await fetch(`${BASE_URL}/text-to-voice/create`, {
+    const createRes = await fetch(`${BASE_URL}/text-to-voice/create-voice-from-preview`, {
       method: "POST",
       headers: {
         "xi-api-key": ELEVENLABS_API_KEY,

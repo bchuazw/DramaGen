@@ -50,6 +50,43 @@ router.post("/voice/clone", requireAuth, upload.single("audio"), async (req, res
   res.json({ voice_id: result.voice_id, name: result.name });
 });
 
+router.get("/voices/:voiceId/preview", async (req, res): Promise<void> => {
+  const { voiceId } = req.params;
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    res.status(503).json({ error: "Voice preview unavailable" });
+    return;
+  }
+
+  try {
+    const voiceRes = await fetch(`https://api.elevenlabs.io/v1/voices/${voiceId}`, {
+      headers: { "xi-api-key": apiKey },
+    });
+    if (!voiceRes.ok) {
+      res.status(404).json({ error: "Voice not found" });
+      return;
+    }
+    const voiceData = await voiceRes.json() as { preview_url?: string };
+    if (!voiceData.preview_url) {
+      res.status(404).json({ error: "No preview available" });
+      return;
+    }
+
+    const audioRes = await fetch(voiceData.preview_url);
+    if (!audioRes.ok) {
+      res.status(502).json({ error: "Preview fetch failed" });
+      return;
+    }
+
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    const buffer = Buffer.from(await audioRes.arrayBuffer());
+    res.send(buffer);
+  } catch {
+    res.status(500).json({ error: "Preview failed" });
+  }
+});
+
 router.get("/voice/my-clone", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
@@ -70,14 +107,19 @@ export async function initializePresetVoices(): Promise<void> {
   const existing = await db.select().from(presetVoicesTable);
   const existingIds = new Set(existing.map((v) => v.id));
 
-  for (const preset of VOICE_PRESETS) {
+  for (let i = 0; i < VOICE_PRESETS.length; i++) {
+    const preset = VOICE_PRESETS[i];
     if (existingIds.has(preset.id)) {
       logger.info({ presetId: preset.id }, "Preset voice already exists, skipping");
       continue;
     }
 
+    if (i > 0) {
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+
     try {
-      const voiceId = await designAndSaveVoice(preset, VOICE_PRESETS.indexOf(preset));
+      const voiceId = await designAndSaveVoice(preset, i);
       await db.insert(presetVoicesTable).values({
         id: preset.id,
         elevenlabsVoiceId: voiceId,
